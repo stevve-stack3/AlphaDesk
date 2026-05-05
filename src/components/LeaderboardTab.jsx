@@ -10,7 +10,12 @@ export default function LeaderboardTab({ wallets, onSelectWallet, copiedAddress,
   }, []);
 
   if (!wallets || wallets.length === 0) {
-    return <div className="empty-state">No wallets discovered yet. Try refreshing data.</div>;
+    return (
+      <div className="empty-state">
+        <span className="empty-title">Waiting for pipeline data</span>
+        <span className="empty-detail">The live Birdeye pipeline is initializing. Wallets will appear here once scanning completes.</span>
+      </div>
+    );
   }
 
   function copyAddr(e, addr) {
