@@ -74,7 +74,7 @@ A signal fires when **3 or more** top-10 wallets currently hold the same token:
 
 ```bash
 # Clone
-git clone https://github.com/Savage3-stack/AlphaDesk.git
+git clone https://github.com/Savage27z/AlphaDesk.git
 cd AlphaDesk
 
 # Install
