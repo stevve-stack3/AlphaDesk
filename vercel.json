@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/birdeye", "destination": "/api/birdeye" }
+  ]
+}
