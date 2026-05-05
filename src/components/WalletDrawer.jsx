@@ -40,6 +40,16 @@ export default function WalletDrawer({ wallet, onClose, feed, copiedAddress, set
           <div className="drawer-full-addr" onClick={copyFullAddr} title="Click to copy">
             {wallet.address}
             {copiedAddress === wallet.address && <span className="copied-tip">Copied!</span>}
+            <a
+              href={`https://solscan.io/account/${wallet.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="solscan-link"
+              onClick={(e) => e.stopPropagation()}
+              title="View on Solscan"
+            >
+              ↗
+            </a>
           </div>
         </div>
 
