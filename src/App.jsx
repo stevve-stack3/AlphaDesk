@@ -265,7 +265,7 @@ function DemoBanner({ isDemo }) {
   if (!isDemo) return null;
   return (
     <div className="demo-banner">
-      DEMO MODE — Click Refresh to load live data, or enter your own Birdeye API key
+      DEMO MODE — Click Refresh to load live data
     </div>
   );
 }
