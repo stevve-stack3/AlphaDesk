@@ -18,7 +18,7 @@ export default function ModeBanner({ mode, dataSource, error, onRetry, onUseDemo
       <div className="mode-banner demo">
         <span className="banner-dot demo" />
         <span className="banner-text">
-          Demo Mode {'\u2014'} Displaying sample snapshot data. Switch to Live for real Birdeye data.
+          Demo snapshot {'\u2014'} switch to Live to run the Birdeye pipeline through the secure proxy or your own key.
         </span>
       </div>
     );

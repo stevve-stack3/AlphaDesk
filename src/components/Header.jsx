@@ -12,6 +12,8 @@ export default function Header({
   lastRefresh,
   dataSource,
   onShowExplainer,
+  autoRefreshInterval,
+  setAutoRefreshInterval,
 }) {
   return (
     <header className="header">
@@ -66,6 +68,18 @@ export default function Header({
         <button className="refresh-btn" onClick={onRefresh} disabled={isLoading}>
           {isLoading ? 'Loading\u2026' : '\u27F3 Refresh'}
         </button>
+        {mode === 'live' && (
+          <select
+            className="auto-refresh-select"
+            value={autoRefreshInterval || ''}
+            onChange={(e) => setAutoRefreshInterval(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Auto: Off</option>
+            <option value="30000">30s</option>
+            <option value="60000">1m</option>
+            <option value="300000">5m</option>
+          </select>
+        )}
       </div>
     </header>
   );

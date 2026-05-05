@@ -1,16 +1,96 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { shortAddr, formatUsd, timeAgo, getTier, getTierColor, getTierDimColor } from '../utils/formatters.js';
+
+const SORT_COLUMNS = [
+  { key: 'rank', label: 'Rank', className: 'lb-rank' },
+  { key: 'wallet', label: 'Wallet', className: 'lb-wallet' },
+  { key: 'alphaScore', label: 'Score', className: 'lb-score' },
+  { key: 'positions.length', label: 'Tokens', className: 'lb-tokens' },
+  { key: 'portfolio', label: 'Portfolio', className: 'lb-portfolio' },
+  { key: 'lastActive', label: 'Last Active', className: 'lb-active' },
+  { key: 'tier', label: 'Tier', className: 'lb-tier' },
+];
+
+function getSortValue(w, key) {
+  if (key === 'rank' || key === 'alphaScore' || key === 'tier') return w.alphaScore || 0;
+  if (key === 'positions.length') return w.positions?.length || 0;
+  if (key === 'portfolio') return w.portfolio || 0;
+  if (key === 'lastActive') return w.lastActive || 0;
+  if (key === 'wallet') return w.address || '';
+  return 0;
+}
 
 export default function LeaderboardTab({ wallets, onSelectWallet, copiedAddress, setCopiedAddress }) {
   const [animateScores, setAnimateScores] = useState(false);
+  const [sortKey, setSortKey] = useState('alphaScore');
+  const [sortDir, setSortDir] = useState('desc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => setAnimateScores(true), 100);
     return () => clearTimeout(t);
   }, []);
 
+  function handleSort(key) {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  }
+
+  const filtered = useMemo(() => {
+    if (!wallets) return [];
+    if (!searchQuery) return wallets;
+    const q = searchQuery.toLowerCase();
+    return wallets.filter(w =>
+      w.address.toLowerCase().includes(q) ||
+      (w.tier || getTier(w.alphaScore)).toLowerCase().includes(q)
+    );
+  }, [wallets, searchQuery]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const aVal = getSortValue(a, sortKey);
+      const bVal = getSortValue(b, sortKey);
+      if (sortKey === 'wallet') {
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  function handleExport() {
+    const headers = ['Rank', 'Address', 'AlphaScore', 'Tier', 'Tokens', 'Portfolio_USD', 'Last_Active'];
+    const rows = sorted.map((w, i) => [
+      i + 1,
+      w.address,
+      w.alphaScore,
+      w.tier || getTier(w.alphaScore),
+      w.positions?.length || 0,
+      w.portfolio || 0,
+      w.lastActive ? new Date(w.lastActive).toISOString() : '',
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alphadesk-leaderboard-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!wallets || wallets.length === 0) {
-    return <div className="empty-state">No wallets discovered yet. Try refreshing data.</div>;
+    return (
+      <div className="empty-state">
+        <span className="empty-title">Waiting for pipeline data</span>
+        <span className="empty-detail">The live Birdeye pipeline is initializing. Wallets will appear here once scanning completes.</span>
+      </div>
+    );
   }
 
   function copyAddr(e, addr) {
@@ -22,17 +102,36 @@ export default function LeaderboardTab({ wallets, onSelectWallet, copiedAddress,
 
   return (
     <div className="leaderboard">
+      <div className="leaderboard-toolbar">
+        <input
+          className="leaderboard-search"
+          type="text"
+          placeholder="Search wallets or filter by tier..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <span className="leaderboard-count">{filtered.length} of {wallets.length} wallets</span>
+        <button className="export-btn" onClick={handleExport} title="Export leaderboard as CSV">
+          Export CSV
+        </button>
+      </div>
       <div className="leaderboard-header">
-        <span className="lb-col lb-rank">Rank</span>
-        <span className="lb-col lb-wallet">Wallet</span>
-        <span className="lb-col lb-score">Score</span>
-        <span className="lb-col lb-tokens">Tokens</span>
-        <span className="lb-col lb-portfolio">Portfolio</span>
-        <span className="lb-col lb-active">Last Active</span>
-        <span className="lb-col lb-tier">Tier</span>
+        {SORT_COLUMNS.map(col => (
+          <span key={col.key} className={`lb-col ${col.className}`}>
+            <button
+              className={`lb-header-btn ${sortKey === col.key ? 'active' : ''}`}
+              onClick={() => handleSort(col.key)}
+            >
+              {col.label}
+              {sortKey === col.key && (
+                <span className="sort-arrow">{sortDir === 'asc' ? '▲' : '▼'}</span>
+              )}
+            </button>
+          </span>
+        ))}
       </div>
       <div className="leaderboard-body">
-        {wallets.map((w, i) => {
+        {sorted.map((w, i) => {
           const tier = w.tier || getTier(w.alphaScore);
           const tierColor = getTierColor(tier);
           const tierDim = getTierDimColor(tier);
@@ -49,6 +148,16 @@ export default function LeaderboardTab({ wallets, onSelectWallet, copiedAddress,
                   {shortAddr(w.address)}
                   {copiedAddress === w.address && <span className="copied-tip">Copied!</span>}
                 </button>
+                <a
+                  href={`https://solscan.io/account/${w.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="solscan-link"
+                  onClick={(e) => e.stopPropagation()}
+                  title="View on Solscan"
+                >
+                  ↗
+                </a>
               </span>
               <span className="lb-col lb-score">
                 <div className="score-bar-container">

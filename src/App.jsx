@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DEMO_WALLETS, DEMO_SIGNALS, DEMO_FEED } from './data/demoData.js';
 import { createBirdeyeClient } from './services/birdeye.js';
 import { runLivePipeline } from './services/dataPipeline.js';
@@ -11,6 +11,7 @@ import SignalsDetailTab from './components/SignalsDetailTab.jsx';
 import WalletDrawer from './components/WalletDrawer.jsx';
 import AlphaScoreExplainer from './components/AlphaScoreExplainer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
+import Footer from './components/Footer.jsx';
 
 const STEPS = [
   'Fetching trending tokens\u2026',
@@ -39,6 +40,8 @@ export default function App() {
   const [copiedAddress, setCopiedAddress] = useState(null);
   const [showExplainer, setShowExplainer] = useState(false);
   const [meta, setMeta] = useState(null);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const dataSource = useMemo(() => {
     if (mode === 'demo') return 'Demo Snapshot';
@@ -54,6 +57,7 @@ export default function App() {
     setLoadingSteps(steps);
 
     const client = createBirdeyeClient({ mode: 'live', userApiKey });
+    const startTime = Date.now();
 
     try {
       const result = await runLivePipeline(client, (idx) => {
@@ -63,7 +67,7 @@ export default function App() {
       setWallets(result.wallets);
       setSignals(result.signals);
       setFeed(result.feed);
-      setMeta(result.meta);
+      setMeta({ ...result.meta, durationMs: Date.now() - startTime });
       setLastRefresh(Date.now());
 
       setLoadingSteps(prev => prev.map(s => ({ ...s, done: true })));
@@ -85,6 +89,7 @@ export default function App() {
       setFeed(DEMO_FEED);
       setLastRefresh(null);
       setMeta(null);
+      setAutoRefreshInterval(null);
     } else {
       setWallets([]);
       setSignals([]);
@@ -110,6 +115,40 @@ export default function App() {
     handleModeChange('demo');
   }, [handleModeChange]);
 
+  useEffect(() => {
+    if (!autoRefreshInterval || mode !== 'live') return;
+    const id = setInterval(() => {
+      if (!isLoading) handleRefresh();
+    }, autoRefreshInterval);
+    return () => clearInterval(id);
+  }, [autoRefreshInterval, mode, isLoading, handleRefresh]);
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+      if (!isLoading && e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleRefresh();
+      }
+      if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleModeChange('demo');
+      }
+      if (e.key === 'l' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleModeChange('live');
+      }
+      if (e.key === '1') setActiveTab('leaderboard');
+      if (e.key === '2') setActiveTab('feed');
+      if (e.key === '3') setActiveTab('signals');
+      if (e.key === '?' && !e.metaKey) setShowShortcuts(prev => !prev);
+      if (e.key === 'Escape') { setShowShortcuts(false); setShowExplainer(false); setSelectedWallet(null); }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleRefresh, handleModeChange, isLoading]);
+
   return (
     <div className="app">
       <Header
@@ -124,6 +163,8 @@ export default function App() {
         lastRefresh={lastRefresh}
         dataSource={dataSource}
         onShowExplainer={() => setShowExplainer(true)}
+        autoRefreshInterval={autoRefreshInterval}
+        setAutoRefreshInterval={setAutoRefreshInterval}
       />
       <ModeBanner
         mode={mode}
@@ -151,7 +192,8 @@ export default function App() {
             ))}
             {meta && (
               <span className="tab-meta">
-                {meta.endpointsUsed} endpoints &middot; {meta.tokensScanned} tokens &middot; {meta.walletsEnriched} wallets
+                {meta.endpointsUsed} API calls &middot; {meta.tokensScanned} tokens &middot; {meta.walletsEnriched} wallets
+                {meta.durationMs && ` \u00B7 ${(meta.durationMs / 1000).toFixed(1)}s`}
               </span>
             )}
           </div>
@@ -186,8 +228,38 @@ export default function App() {
           />
         )}
       </div>
+      <Footer />
       <LoadingScreen isLoading={isLoading} steps={loadingSteps} />
       {showExplainer && <AlphaScoreExplainer onClose={() => setShowExplainer(false)} />}
+      {showShortcuts && (
+        <div className="explainer-overlay" onClick={() => setShowShortcuts(false)}>
+          <div className="explainer-modal shortcuts-modal" onClick={e => e.stopPropagation()}>
+            <div className="explainer-header">
+              <span className="explainer-title">Keyboard Shortcuts</span>
+              <button className="drawer-close" onClick={() => setShowShortcuts(false)}>{'\u2715'}</button>
+            </div>
+            <div className="explainer-body">
+              <div className="shortcut-grid">
+                {[
+                  ['R', 'Refresh data'],
+                  ['D', 'Switch to Demo'],
+                  ['L', 'Switch to Live'],
+                  ['1', 'Leaderboard tab'],
+                  ['2', 'Feed tab'],
+                  ['3', 'Signals tab'],
+                  ['?', 'Toggle shortcuts'],
+                  ['Esc', 'Close panels'],
+                ].map(([key, desc]) => (
+                  <div key={key} className="shortcut-row">
+                    <kbd className="shortcut-key">{key}</kbd>
+                    <span className="shortcut-desc">{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

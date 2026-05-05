@@ -6,7 +6,7 @@ export default function SignalsPanel({ signals, wallets, onSelectWallet }) {
     return (
       <aside className="signals-panel">
         <div className="panel-title">Conviction Signals</div>
-        <div className="empty-state">No signals detected</div>
+        <div className="empty-state">No signals yet</div>
       </aside>
     );
   }
