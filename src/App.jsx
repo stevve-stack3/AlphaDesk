@@ -227,14 +227,14 @@ function Sparkline({ data, width, height }) {
   );
 }
 
-function Header({ apiKey, setApiKey, showApiKey, setShowApiKey, onRefresh, isLoading, lastRefresh, isDemo }) {
+function Header({ apiKey, setApiKey, showApiKey, setShowApiKey, onRefresh, isLoading, lastRefresh }) {
   return (
     <header className="header">
       <div className="header-left">
         <span className="header-logo-icon">◈</span>
         <span className="header-logo-text">AlphaDesk</span>
-        <span className={`live-dot ${!isDemo ? 'active' : ''}`} />
-        <span className="live-label">{!isDemo ? 'LIVE' : 'IDLE'}</span>
+        <span className={`live-dot ${lastRefresh ? 'active' : ''}`} />
+        <span className="live-label">{lastRefresh ? 'LIVE' : 'IDLE'}</span>
         {lastRefresh && (
           <span className="last-refresh">Updated {timeAgo(lastRefresh)}</span>
         )}
@@ -261,14 +261,7 @@ function Header({ apiKey, setApiKey, showApiKey, setShowApiKey, onRefresh, isLoa
   );
 }
 
-function DemoBanner({ isDemo }) {
-  if (!isDemo) return null;
-  return (
-    <div className="demo-banner">
-      DEMO MODE — Click Refresh to load live data
-    </div>
-  );
-}
+
 
 function LoadingScreen({ isLoading, steps }) {
   if (!isLoading) return null;
@@ -744,7 +737,7 @@ body { background: var(--bg-base); color: var(--text-primary); font-family: var(
 .tab-btn:hover { color: var(--text-secondary); }
 .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
 .tab-content { flex: 1; overflow-y: auto; padding: 16px; }
-.demo-banner { background: var(--amber-dim); border: 1px solid rgba(246,173,85,0.2); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; color: var(--amber); font-family: var(--font-mono); text-align: center; }
+
 .empty-state { color: var(--text-tertiary); font-size: 14px; text-align: center; padding: 40px 20px; font-family: var(--font-mono); }
 .error-card { background: var(--red-dim); border: 1px solid rgba(255,77,106,0.2); border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 16px; }
 .error-card p { color: var(--red); font-size: 14px; margin-bottom: 12px; }
@@ -879,13 +872,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('leaderboard');
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
-  const [isDemo, setIsDemo] = useState(true);
+
   const [copiedAddress, setCopiedAddress] = useState(null);
   const [liveSignals, setLiveSignals] = useState(null);
 
   const convictionSignals = useMemo(() => {
     if (liveSignals) return liveSignals;
-    if (isDemo) return MOCK_SIGNALS;
+    if (!liveSignals && smartWallets === MOCK_WALLETS) return MOCK_SIGNALS;
     const tokenHolders = {};
     smartWallets.forEach(w => {
       (w.positions || []).forEach(pos => {
@@ -908,7 +901,7 @@ function App() {
         marketCap: 0,
       }))
       .sort((a, b) => b.walletCount - a.walletCount);
-  }, [smartWallets, isDemo, liveSignals]);
+  }, [smartWallets, liveSignals]);
 
   async function apiFetch(endpoint) {
     let resp;
@@ -934,7 +927,6 @@ function App() {
   async function loadLiveData() {
     setIsLoading(true);
     setError(null);
-    setIsDemo(false);
 
     let steps = [
       { label: 'Fetching trending tokens...', done: false },
@@ -1102,12 +1094,15 @@ function App() {
       setIsLoading(false);
     } catch (err) {
       setError(err.message || 'Failed to load data');
-      setIsDemo(true);
       setSmartWallets(MOCK_WALLETS);
       setLiveSignals(null);
       setIsLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadLiveData();
+  }, []);
 
   return (
     <>
@@ -1121,7 +1116,6 @@ function App() {
           onRefresh={loadLiveData}
           isLoading={isLoading}
           lastRefresh={lastRefresh}
-          isDemo={isDemo}
         />
         <div className="layout">
           <SignalsPanel
@@ -1151,7 +1145,7 @@ function App() {
               </button>
             </div>
             <div className="tab-content">
-              <DemoBanner isDemo={isDemo} />
+
               {error && (
                 <div className="error-card">
                   <p>{error}</p>
