@@ -101,7 +101,7 @@ A heuristic intelligence metric (0–100) composed of:
 - **Three Data Modes** — Demo (instant, no key needed), Live via Proxy (server-side key), Live via User Key
 - **Auto-Refresh** — Configurable 30s / 1m / 5m intervals in live mode
 - **Keyboard Shortcuts** — R (refresh), D (demo), L (live), 1/2/3 (tabs), ? (help)
-- **Solscan Integration** — Deep links to verify any wallet or token on-chain
+- **Solscan Integration** — Deep links to verify wallets on-chain
 - **Pipeline Stats** — Shows API calls made, tokens scanned, wallets enriched, and timing
 
 ## Proxy Security

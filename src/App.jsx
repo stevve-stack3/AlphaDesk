@@ -127,7 +127,7 @@ export default function App() {
     function handleKeyDown(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
-      if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+      if (!isLoading && e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         handleRefresh();
       }
@@ -143,10 +143,11 @@ export default function App() {
       if (e.key === '2') setActiveTab('feed');
       if (e.key === '3') setActiveTab('signals');
       if (e.key === '?' && !e.metaKey) setShowShortcuts(prev => !prev);
+      if (e.key === 'Escape') { setShowShortcuts(false); setShowExplainer(false); setSelectedWallet(null); }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRefresh, handleModeChange]);
+  }, [handleRefresh, handleModeChange, isLoading]);
 
   return (
     <div className="app">
