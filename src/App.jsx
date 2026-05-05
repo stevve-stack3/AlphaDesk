@@ -265,7 +265,7 @@ function DemoBanner({ isDemo }) {
   if (!isDemo) return null;
   return (
     <div className="demo-banner">
-      DEMO MODE — Enter your Birdeye API key to load live data
+      DEMO MODE — Click Refresh to load live data, or enter your own Birdeye API key
     </div>
   );
 }
@@ -910,12 +910,15 @@ function App() {
       .sort((a, b) => b.walletCount - a.walletCount);
   }, [smartWallets, isDemo, liveSignals]);
 
-  const BASE_URL = 'https://public-api.birdeye.so';
-
   async function apiFetch(endpoint) {
-    const resp = await fetch(BASE_URL + endpoint, {
-      headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' },
-    });
+    let resp;
+    if (apiKey.trim()) {
+      resp = await fetch('https://public-api.birdeye.so' + endpoint, {
+        headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' },
+      });
+    } else {
+      resp = await fetch('/api/birdeye?endpoint=' + encodeURIComponent(endpoint));
+    }
     if (!resp.ok) throw new Error(`API error ${resp.status}: ${resp.statusText}`);
     return resp.json();
   }
@@ -929,7 +932,6 @@ function App() {
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
   async function loadLiveData() {
-    if (!apiKey.trim()) return;
     setIsLoading(true);
     setError(null);
     setIsDemo(false);

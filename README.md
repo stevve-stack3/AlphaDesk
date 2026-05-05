@@ -86,6 +86,18 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The app loads with **demo data** immediately — no API key needed to explore the UI.
 
+---
+
+## Deploy to Vercel
+
+1. Push this repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → Import the repo
+3. Add environment variable: `BIRDEYE_API_KEY` = your Birdeye API key
+4. Click Deploy — Vercel auto-detects Vite + the serverless function
+5. Users can now use the app without their own API key
+
+The `/api/birdeye` serverless function proxies all Birdeye API requests server-side, keeping your API key secure. Users can optionally enter their own key to bypass the proxy.
+
 ### Live Data Mode
 
 1. Get a free API key from [Birdeye](https://birdeye.so)
@@ -99,11 +111,14 @@ Open [http://localhost:5173](http://localhost:5173). The app loads with **demo d
 
 ```
 AlphaDesk/
+├── api/
+│   └── birdeye.js      # Vercel serverless proxy for Birdeye API
 ├── index.html          # Entry point with custom favicon
 ├── src/
 │   ├── main.jsx        # React mount (9 lines)
 │   └── App.jsx         # Entire application (single file)
 ├── package.json
+├── vercel.json         # Vercel rewrites config
 ├── vite.config.js
 └── .gitignore
 ```
