@@ -1,35 +1,86 @@
 # AlphaDesk — Smart Money Intelligence Terminal for Solana
 
-AlphaDesk discovers high-performing wallets on-chain, ranks them by AlphaScore, and surfaces Conviction Signals when multiple smart wallets converge on the same token.
+> Discover high-performing wallets on-chain, rank them by AlphaScore, and surface conviction signals when multiple smart wallets converge on the same token.
 
-## Modes
+[![Live Demo](https://img.shields.io/badge/Live-alpha--desk--eight.vercel.app-00D4A8?style=flat-square)](https://alpha-desk-eight.vercel.app/)
+[![Built with Birdeye Data](https://img.shields.io/badge/Powered%20by-Birdeye%20Data%20API-blue?style=flat-square)](https://bds.birdeye.so/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
 
-| Mode | Description |
-|------|-------------|
-| **Demo** | Deterministic sample data, no API key needed. Clearly labeled in the UI. |
-| **Live via Proxy** | Uses the Vercel serverless proxy with a server-side Birdeye key. Requires `BIRDEYE_API_KEY` env var on Vercel. |
-| **Live via User Key** | User pastes their own Birdeye API key in the header. Requests go directly to Birdeye from the browser. |
+---
 
-The mode toggle is in the header. Switching to Demo never silently uses live data. If Live fails, the UI shows an error with options to retry or fall back to demo data.
+## What It Does
 
-## Data Pipeline
+AlphaDesk runs a multi-step data pipeline against the Birdeye API to:
 
-In Live mode, the app runs a multi-step pipeline:
+1. **Discover trending tokens** — Fetches the top 10 Solana tokens by 24h volume
+2. **Identify top traders** — Pulls the top 10 traders per token (up to 100 wallets)
+3. **Deduplicate & rank wallets** — Finds wallets that appear across multiple trending tokens
+4. **Enrich portfolios** — Fetches each wallet's full token holdings
+5. **Price & security analysis** — Gets real-time prices, sparklines, and security risk flags
+6. **Compute AlphaScore** — A 5-factor heuristic (0–100) that ranks wallet intelligence
+7. **Surface conviction signals** — Detects when 3+ scored wallets converge on the same token
+8. **Generate activity feed** — Derives a live feed from top trader data (not fabricated)
 
-1. Fetch top 10 trending Solana tokens by 24h volume (`/defi/tokenlist`)
-2. Pull top 10 traders per token (`/defi/v2/tokens/top_traders`)
-3. Discover unique wallets across all tokens
-4. Enrich each wallet portfolio (`/v1/wallet/token_list`)
-5. Fetch price data and sparklines (`/defi/token_overview`, `/defi/history_price`)
-6. Run token security checks (`/defi/token_security`)
-7. Compute AlphaScores with per-factor breakdowns
-8. Derive conviction signals and activity feed
+## Architecture
 
-The activity feed is derived from top trader data, not fabricated trades. Each entry is labeled with its source and quality.
+```
+┌─────────────────────────────────────────────────────────┐
+│                    React Frontend                        │
+│  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────┐ │
+│  │Leaderboard│  │  Signals │  │   Feed    │  │ Wallet │ │
+│  │  (sort,   │  │  Panel   │  │ (derived) │  │ Drawer │ │
+│  │  search,  │  │  (left)  │  │           │  │(detail)│ │
+│  │  export)  │  │          │  │           │  │        │ │
+│  └─────┬─────┘  └────┬─────┘  └─────┬─────┘  └───┬────┘ │
+│        └──────────────┴──────────────┴────────────┘      │
+│                         │                                │
+│              ┌──────────┴──────────┐                     │
+│              │   Data Pipeline     │                     │
+│              │  (8-step orchestr.) │                     │
+│              └──────────┬──────────┘                     │
+│                         │                                │
+│         ┌───────────────┼───────────────┐                │
+│         │               │               │                │
+│    ┌────┴────┐   ┌──────┴──────┐  ┌─────┴─────┐         │
+│    │ Scoring │   │ Normalizers │  │  Signals  │         │
+│    │(5-factor│   │ (defensive  │  │(conviction│         │
+│    │  alpha) │   │  parsing)   │  │  + feed)  │         │
+│    └─────────┘   └─────────────┘  └───────────┘         │
+└────────────────────────┬────────────────────────────────┘
+                         │
+              ┌──────────┴──────────┐
+              │  Vercel Serverless  │
+              │   Proxy (hardened)  │
+              │  • Endpoint allow-  │
+              │    list (6 paths)   │
+              │  • Rate limiting    │
+              │  • CORS validation  │
+              │  • Param sanitize   │
+              └──────────┬──────────┘
+                         │
+              ┌──────────┴──────────┐
+              │   Birdeye Data API  │
+              │  (public-api.birdeye│
+              │        .so)         │
+              └─────────────────────┘
+```
+
+## Birdeye API Endpoints Used
+
+| Endpoint | Purpose | Cache |
+|----------|---------|-------|
+| `/defi/tokenlist` | Top trending tokens by 24h volume | 60s |
+| `/defi/v2/tokens/top_traders` | Top 10 traders per token | 30s |
+| `/v1/wallet/token_list` | Wallet portfolio holdings | 30s |
+| `/defi/token_overview` | Price, volume, market cap | 60s |
+| `/defi/history_price` | 24h price history for sparklines | 120s |
+| `/defi/token_security` | Security risk assessment | 300s |
+
+A full pipeline run makes **50–80+ API calls** depending on wallet/token count.
 
 ## AlphaScore
 
-A heuristic metric (0–100) composed of:
+A heuristic intelligence metric (0–100) composed of:
 
 | Factor | Max | Description |
 |--------|-----|-------------|
@@ -39,63 +90,36 @@ A heuristic metric (0–100) composed of:
 | Data Quality | 10 | Adjusted by security risk of held tokens |
 | Elite Bonus | 10 | Extra points for 5+ trending token appearances |
 
-Tiers: **ELITE** (80+) · **SMART** (50–79) · **ACTIVE** (< 50)
+**Tiers**: ELITE (80+) · SMART (50–79) · ACTIVE (< 50)
 
-The UI includes a Score Info button with full methodology explanation and disclaimer.
+## Features
 
-## Project Structure
+- **Smart Money Leaderboard** — Sortable by any column, searchable, exportable as CSV
+- **Conviction Signals** — Auto-detects tokens held by 3+ smart wallets with conviction levels (MODERATE → HIGH → EXTREME)
+- **Activity Feed** — Derived from Birdeye top trader data, not fabricated
+- **Wallet Detail Drawer** — Per-factor score breakdown, position list with sparklines, security flags
+- **Three Data Modes** — Demo (instant, no key needed), Live via Proxy (server-side key), Live via User Key
+- **Auto-Refresh** — Configurable 30s / 1m / 5m intervals in live mode
+- **Keyboard Shortcuts** — R (refresh), D (demo), L (live), 1/2/3 (tabs), ? (help)
+- **Solscan Integration** — Deep links to verify any wallet or token on-chain
+- **Pipeline Stats** — Shows API calls made, tokens scanned, wallets enriched, and timing
 
-```
-AlphaDesk/
-├── api/
-│   └── birdeye.js              # Hardened Vercel serverless proxy
-├── src/
-│   ├── main.jsx                # Entry point, CSS import
-│   ├── App.jsx                 # Composition root, state, mode control
-│   ├── styles.css              # All styles (dark theme, responsive)
-│   ├── components/
-│   │   ├── Header.jsx          # Mode toggle, API key, refresh
-│   │   ├── ModeBanner.jsx      # Data source status banner
-│   │   ├── SignalsPanel.jsx    # Left sidebar conviction signals
-│   │   ├── LeaderboardTab.jsx  # Wallet ranking table
-│   │   ├── FeedTab.jsx         # Activity feed (derived, not mock)
-│   │   ├── SignalsDetailTab.jsx# Expanded signal view
-│   │   ├── WalletDrawer.jsx    # Wallet detail with score breakdown
-│   │   ├── AlphaScoreExplainer.jsx # Methodology modal
-│   │   ├── Sparkline.jsx       # SVG sparkline chart
-│   │   └── LoadingScreen.jsx   # Pipeline progress overlay
-│   ├── services/
-│   │   ├── birdeye.js          # API client (proxy/direct/demo)
-│   │   └── dataPipeline.js     # Full live data pipeline
-│   ├── domain/
-│   │   ├── scoring.js          # AlphaScore with breakdown
-│   │   ├── signals.js          # Conviction signals, feed derivation
-│   │   └── normalizers.js      # Defensive Birdeye response parsing
-│   ├── data/
-│   │   └── demoData.js         # Deterministic demo wallets/signals/feed
-│   └── utils/
-│       └── formatters.js       # USD, number, time, address formatting
-├── index.html
-├── package.json
-├── vite.config.js
-├── eslint.config.js
-└── vercel.json
-```
+## Proxy Security
 
-## API Proxy Security
+The Vercel serverless proxy (`api/birdeye.js`) implements:
 
-The serverless proxy (`api/birdeye.js`):
-
-- **Allowlisted paths only**: Only the 6 specific Birdeye endpoints used by the app are permitted
-- **Parameter validation**: Query params are checked for length and character safety
-- **CORS**: Same-origin by default; set `ALLOWED_ORIGINS` env var for explicit origins (no wildcard)
-- **Rate limiting**: In-memory IP-based, 40 requests/minute per IP (best-effort for serverless)
-- **Cache headers**: Per-endpoint cache durations (30s–300s with stale-while-revalidate)
-- **No secret leakage**: Error responses are structured without internal details
+- **Endpoint allowlist** — Only 6 specific Birdeye paths are permitted (no wildcard)
+- **Parameter validation** — Query params checked for length and character safety
+- **CORS** — Same-origin default; configurable via `ALLOWED_ORIGINS` env var
+- **Rate limiting** — IP-based, 150 req/min (best-effort for serverless cold starts)
+- **Cache headers** — Per-endpoint `s-maxage` with `stale-while-revalidate`
+- **No secret leakage** — Error responses are structured without internal details
 
 ## Quick Start
 
 ```bash
+git clone https://github.com/stevve-stack3/AlphaDesk.git
+cd AlphaDesk
 npm install
 npm run dev
 ```
@@ -106,9 +130,56 @@ Opens at `http://localhost:5173` in Demo mode. No API key needed.
 
 1. Push to GitHub
 2. Import in Vercel
-3. Set environment variable: `BIRDEYE_API_KEY` = your Birdeye API key
-4. Optionally set `ALLOWED_ORIGINS` for CORS (comma-separated)
-5. Deploy
+3. Set env: `BIRDEYE_API_KEY` = your Birdeye API key
+4. Optionally set `ALLOWED_ORIGINS` for CORS
+5. Deploy — live at your Vercel URL
+
+## Project Structure
+
+```
+AlphaDesk/
+├── api/birdeye.js              # Hardened Vercel serverless proxy
+├── src/
+│   ├── App.jsx                 # Root: state, mode control, shortcuts
+│   ├── styles.css              # Dark theme, responsive, all styles
+│   ├── components/
+│   │   ├── Header.jsx          # Mode toggle, API key, refresh, auto-refresh
+│   │   ├── ModeBanner.jsx      # Data source status banner
+│   │   ├── LeaderboardTab.jsx  # Sortable, searchable wallet ranking
+│   │   ├── FeedTab.jsx         # Activity feed (derived from API)
+│   │   ├── SignalsPanel.jsx    # Left sidebar conviction signals
+│   │   ├── SignalsDetailTab.jsx# Expanded signal view with holders
+│   │   ├── WalletDrawer.jsx    # Wallet detail + score breakdown
+│   │   ├── AlphaScoreExplainer.jsx # Methodology modal
+│   │   ├── Sparkline.jsx       # SVG sparkline charts
+│   │   ├── LoadingScreen.jsx   # Pipeline progress overlay
+│   │   └── Footer.jsx          # Attribution + shortcuts hint
+│   ├── services/
+│   │   ├── birdeye.js          # API client (proxy/direct/demo)
+│   │   └── dataPipeline.js     # 8-step live pipeline orchestration
+│   ├── domain/
+│   │   ├── scoring.js          # AlphaScore with 5-factor breakdown
+│   │   ├── signals.js          # Conviction detection + feed derivation
+│   │   └── normalizers.js      # Defensive Birdeye response parsing
+│   ├── data/demoData.js        # Deterministic demo data
+│   └── utils/formatters.js     # USD, number, time, address formatting
+├── index.html
+├── package.json
+├── vite.config.js
+└── vercel.json
+```
+
+## Tech Stack
+
+- **Frontend**: React 19 + Vite 8 (zero UI framework dependencies)
+- **API**: Birdeye Data API (6 endpoints, 50–80+ calls per pipeline run)
+- **Proxy**: Vercel Serverless Functions (Node.js)
+- **Styling**: Custom CSS with CSS variables (dark trading terminal theme)
+- **Deployment**: Vercel
+
+## Disclaimer
+
+AlphaDesk is an analytical tool for on-chain data exploration. It does not constitute financial advice, investment recommendation, or trading signals. AlphaScore is a heuristic metric — past wallet activity does not predict future performance.
 
 ## License
 
