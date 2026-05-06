@@ -999,3 +999,173 @@ body {
   text-align: center;
 }
 .shortcut-desc { font-size: 13px; color: var(--text-secondary); }
+
+/* ── Overlap Tab ───────────────────────────────────────── */
+.overlap-tab { display: flex; flex-direction: column; gap: 12px; }
+.overlap-summary {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+.overlap-scroll { overflow: auto; max-height: calc(100vh - 200px); }
+.overlap-table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  min-width: 100%;
+}
+.overlap-table th,
+.overlap-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  text-align: center;
+  white-space: nowrap;
+}
+.overlap-corner {
+  text-align: left;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-size: 10px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-surface);
+  z-index: 2;
+}
+.overlap-wallet-header {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.overlap-wallet-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+.overlap-wallet-btn:hover { text-decoration: underline; }
+.overlap-token-cell {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-base);
+  z-index: 1;
+}
+.overlap-token-sym { font-weight: 600; color: var(--text-primary); }
+.overlap-holder-count {
+  font-size: 9px;
+  color: var(--green);
+  background: var(--green-dim);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+}
+.overlap-cell { min-width: 40px; }
+.overlap-cell.held { color: var(--green); font-size: 10px; }
+.overlap-cell.empty { color: var(--border-subtle); }
+.overlap-table tbody tr:hover { background: var(--bg-elevated); }
+
+/* ── Mobile Responsive ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .layout { flex-direction: column; }
+  
+  .signals-panel {
+    width: 100%;
+    min-width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .signals-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+    gap: 8px;
+  }
+  .signal-card {
+    min-width: 220px;
+    flex-shrink: 0;
+  }
+  
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: auto;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .header-left { flex-wrap: wrap; }
+  .header-right { flex-wrap: wrap; width: 100%; }
+  .api-input-group { flex: 1; min-width: 0; }
+  .api-input { width: 100%; min-width: 0; }
+  
+  .leaderboard-toolbar { flex-wrap: wrap; }
+  .leaderboard-search { max-width: 100%; min-width: 0; }
+  
+  .leaderboard-header { display: none; }
+  .leaderboard-row {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+  .lb-rank { width: 30px; }
+  .lb-wallet { width: auto; flex: 1; }
+  .lb-score { width: auto; }
+  .lb-tokens { display: none; }
+  .lb-portfolio { text-align: left; flex: none; width: auto; }
+  .lb-active { display: none; }
+  .lb-tier { width: auto; text-align: left; }
+  
+  .feed-header-row { display: none; }
+  .feed-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .feed-source { display: none; }
+  .feed-addr { min-width: 70px; }
+  .feed-value { text-align: left; min-width: auto; }
+  .feed-trades { display: none; }
+  
+  .wallet-drawer {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  
+  .tab-bar { overflow-x: auto; }
+  .tab-meta { display: none; }
+  
+  .explainer-modal,
+  .shortcuts-modal {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    max-height: 80vh;
+  }
+
+  .overlap-scroll { max-height: calc(100vh - 260px); }
+  
+  .app-footer { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .footer-shortcuts { display: none; }
+}
+
+@media (max-width: 480px) {
+  .header-logo { font-size: 15px; }
+  .header-meta { display: none; }
+  .header-source { display: none; }
+  .mode-btn { padding: 4px 10px; font-size: 10px; }
+  .header-btn { padding: 4px 8px; font-size: 10px; }
+  .refresh-btn { padding: 4px 10px; font-size: 10px; }
+  .auto-refresh-select { font-size: 10px; padding: 4px 6px; }
+  
+  .signals-panel { max-height: 160px; }
+  .signal-card { min-width: 180px; padding: 8px; }
+  .signal-symbol { font-size: 14px; }
+  
+  .export-btn { display: none; }
+  
+  .drawer-stats { flex-direction: column; }
+}

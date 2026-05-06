@@ -12,6 +12,24 @@ import WalletDrawer from './components/WalletDrawer.jsx';
 import AlphaScoreExplainer from './components/AlphaScoreExplainer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Footer from './components/Footer.jsx';
+import OverlapTab from './components/OverlapTab.jsx';
+
+const STORAGE_KEY = 'alphadesk_cache';
+
+function loadCachedData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed.timestamp || 0) > 3600000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 const STEPS = [
   'Fetching trending tokens\u2026',
@@ -25,21 +43,30 @@ const STEPS = [
 ];
 
 export default function App() {
-  const [mode, setMode] = useState('demo');
+  const cached = useMemo(() => loadCachedData(), []);
+  const [mode, setMode] = useState(cached ? 'live' : 'demo');
   const [userApiKey, setUserApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState([]);
-  const [wallets, setWallets] = useState(DEMO_WALLETS);
-  const [signals, setSignals] = useState(DEMO_SIGNALS);
-  const [feed, setFeed] = useState(DEMO_FEED);
-  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [wallets, setWallets] = useState(cached ? cached.wallets : DEMO_WALLETS);
+  const [signals, setSignals] = useState(cached ? cached.signals : DEMO_SIGNALS);
+  const [feed, setFeed] = useState(cached ? cached.feed : DEMO_FEED);
+  const [selectedWallet, setSelectedWallet] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash && hash.length > 20) {
+      const initialWallets = cached ? cached.wallets : DEMO_WALLETS;
+      const found = initialWallets.find(w => w.address === hash);
+      if (found) return found;
+    }
+    return null;
+  });
   const [activeTab, setActiveTab] = useState('leaderboard');
-  const [lastRefresh, setLastRefresh] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(cached ? cached.timestamp : null);
   const [error, setError] = useState(null);
   const [copiedAddress, setCopiedAddress] = useState(null);
   const [showExplainer, setShowExplainer] = useState(false);
-  const [meta, setMeta] = useState(null);
+  const [meta, setMeta] = useState(cached ? cached.meta : null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -69,6 +96,22 @@ export default function App() {
       setFeed(result.feed);
       setMeta({ ...result.meta, durationMs: Date.now() - startTime });
       setLastRefresh(Date.now());
+
+      const hash = window.location.hash.slice(1);
+      if (hash && hash.length > 20) {
+        const found = result.wallets.find(w => w.address === hash);
+        if (found) setSelectedWallet(found);
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          wallets: result.wallets,
+          signals: result.signals,
+          feed: result.feed,
+          meta: { ...result.meta, durationMs: Date.now() - startTime },
+          timestamp: Date.now(),
+        }));
+      } catch { /* quota exceeded, ignore */ }
 
       setLoadingSteps(prev => prev.map(s => ({ ...s, done: true })));
       await new Promise(r => setTimeout(r, 400));
@@ -116,6 +159,16 @@ export default function App() {
   }, [handleModeChange]);
 
   useEffect(() => {
+    if (selectedWallet) {
+      window.history.replaceState(null, '', '#' + selectedWallet.address);
+    } else {
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [selectedWallet]);
+
+  useEffect(() => {
     if (!autoRefreshInterval || mode !== 'live') return;
     const id = setInterval(() => {
       if (!isLoading) handleRefresh();
@@ -142,6 +195,7 @@ export default function App() {
       if (e.key === '1') setActiveTab('leaderboard');
       if (e.key === '2') setActiveTab('feed');
       if (e.key === '3') setActiveTab('signals');
+      if (e.key === '4') setActiveTab('overlap');
       if (e.key === '?' && !e.metaKey) setShowShortcuts(prev => !prev);
       if (e.key === 'Escape') { setShowShortcuts(false); setShowExplainer(false); setSelectedWallet(null); }
     }
@@ -181,7 +235,7 @@ export default function App() {
         />
         <div className="main-panel">
           <div className="tab-bar">
-            {['leaderboard', 'feed', 'signals'].map(tab => (
+            {['leaderboard', 'feed', 'signals', 'overlap'].map(tab => (
               <button
                 key={tab}
                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
@@ -216,6 +270,9 @@ export default function App() {
                 onSelectWallet={setSelectedWallet}
               />
             )}
+            {activeTab === 'overlap' && (
+              <OverlapTab wallets={wallets} onSelectWallet={setSelectedWallet} />
+            )}
           </div>
         </div>
         {selectedWallet && (
@@ -247,6 +304,7 @@ export default function App() {
                   ['1', 'Leaderboard tab'],
                   ['2', 'Feed tab'],
                   ['3', 'Signals tab'],
+                  ['4', 'Overlap tab'],
                   ['?', 'Toggle shortcuts'],
                   ['Esc', 'Close panels'],
                 ].map(([key, desc]) => (
