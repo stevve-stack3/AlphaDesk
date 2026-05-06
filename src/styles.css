@@ -999,3 +999,6 @@ body {
   text-align: center;
 }
 .shortcut-desc { font-size: 13px; color: var(--text-secondary); }
+
+.drawer-stat-value.positive { color: var(--green); }
+.drawer-stat-value.negative { color: var(--red); }
