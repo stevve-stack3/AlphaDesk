@@ -37,7 +37,10 @@ export async function runLivePipeline(client, onStep) {
           wallet: t.wallet,
           token,
           volume: t.volume,
+          volumeUsd: t.volumeUsd,
           tradeCount: t.tradeCount,
+          totalPnl: t.totalPnl,
+          realizedPnl: t.realizedPnl,
         });
       });
     } catch { /* skip failed token */ }
@@ -46,18 +49,26 @@ export async function runLivePipeline(client, onStep) {
 
   step(3);
   const walletMap = {};
-  allTraders.forEach(({ wallet, token }) => {
+  allTraders.forEach(({ wallet, token, volume, volumeUsd, tradeCount, totalPnl, realizedPnl }) => {
     if (!wallet) return;
     if (!walletMap[wallet]) {
       walletMap[wallet] = {
         address: wallet,
         appearsInTokens: [],
         lastTradeTimestamp: Date.now(),
+        totalVolumeUsd: 0,
+        totalTrades: 0,
+        totalPnl: 0,
+        realizedPnl: 0,
       };
     }
     if (!walletMap[wallet].appearsInTokens.includes(token.symbol)) {
       walletMap[wallet].appearsInTokens.push(token.symbol);
     }
+    walletMap[wallet].totalVolumeUsd += (volumeUsd || volume || 0);
+    walletMap[wallet].totalTrades += (tradeCount || 0);
+    walletMap[wallet].totalPnl += (totalPnl || 0);
+    walletMap[wallet].realizedPnl += (realizedPnl || 0);
   });
   const uniqueWallets = Object.values(walletMap)
     .sort((a, b) => b.appearsInTokens.length - a.appearsInTokens.length)
@@ -90,8 +101,16 @@ export async function runLivePipeline(client, onStep) {
     } catch {
       w.positions = [];
       w.portfolio = 0;
+      w.portfolioFallback = true;
     }
     await delay(200);
+  }
+
+  for (const w of uniqueWallets) {
+    if (w.portfolioFallback) {
+      w.portfolio = w.totalVolumeUsd || 0;
+      w.portfolioLabel = '24h Vol';
+    }
   }
 
   step(5);

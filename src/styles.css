@@ -1000,6 +1000,9 @@ body {
 }
 .shortcut-desc { font-size: 13px; color: var(--text-secondary); }
 
+.drawer-stat-value.positive { color: var(--green); }
+.drawer-stat-value.negative { color: var(--red); }
+
 /* ── Overlap Tab ───────────────────────────────────────── */
 .overlap-tab { display: flex; flex-direction: column; gap: 12px; }
 .overlap-summary {
