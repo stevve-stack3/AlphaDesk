@@ -107,7 +107,7 @@ export async function runLivePipeline(client, onStep) {
   }
 
   for (const w of uniqueWallets) {
-    if (w.portfolioFallback || w.portfolio === 0) {
+    if (w.portfolioFallback) {
       w.portfolio = w.totalVolumeUsd || 0;
       w.portfolioLabel = '24h Vol';
     }
