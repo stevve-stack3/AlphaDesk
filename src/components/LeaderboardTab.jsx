@@ -1,15 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { shortAddr, formatUsd, timeAgo, getTier, getTierColor, getTierDimColor } from '../utils/formatters.js';
 
-const SORT_COLUMNS = [
-  { key: 'rank', label: 'Rank', className: 'lb-rank' },
-  { key: 'wallet', label: 'Wallet', className: 'lb-wallet' },
-  { key: 'alphaScore', label: 'Score', className: 'lb-score' },
-  { key: 'positions.length', label: 'Tokens', className: 'lb-tokens' },
-  { key: 'portfolio', label: 'Portfolio', className: 'lb-portfolio' },
-  { key: 'lastActive', label: 'Last Active', className: 'lb-active' },
-  { key: 'tier', label: 'Tier', className: 'lb-tier' },
-];
+function getSortColumns(wallets) {
+  const portfolioLabel = wallets?.some(w => w.portfolioLabel) ? '24h Volume' : 'Portfolio';
+  return [
+    { key: 'rank', label: 'Rank', className: 'lb-rank' },
+    { key: 'wallet', label: 'Wallet', className: 'lb-wallet' },
+    { key: 'alphaScore', label: 'Score', className: 'lb-score' },
+    { key: 'positions.length', label: 'Tokens', className: 'lb-tokens' },
+    { key: 'portfolio', label: portfolioLabel, className: 'lb-portfolio' },
+    { key: 'lastActive', label: 'Last Active', className: 'lb-active' },
+    { key: 'tier', label: 'Tier', className: 'lb-tier' },
+  ];
+}
 
 function getSortValue(w, key) {
   if (key === 'rank' || key === 'alphaScore' || key === 'tier') return w.alphaScore || 0;
@@ -116,7 +119,7 @@ export default function LeaderboardTab({ wallets, onSelectWallet, copiedAddress,
         </button>
       </div>
       <div className="leaderboard-header">
-        {SORT_COLUMNS.map(col => (
+        {getSortColumns(wallets).map(col => (
           <span key={col.key} className={`lb-col ${col.className}`}>
             <button
               className={`lb-header-btn ${sortKey === col.key ? 'active' : ''}`}

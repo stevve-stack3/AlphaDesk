@@ -16,9 +16,12 @@ export function normalizeTopTraders(resp) {
   return traders.map(t => ({
     wallet: t.owner || t.address || '',
     volume: t.volume ?? t.volumeUSD ?? 0,
-    tradeCount: t.trade_count ?? t.tradeCount ?? 0,
-    buyVolume: t.buy_volume ?? t.buyVolume ?? 0,
-    sellVolume: t.sell_volume ?? t.sellVolume ?? 0,
+    volumeUsd: t.volumeUsd ?? t.volumeUSD ?? t.volume ?? 0,
+    tradeCount: t.trade ?? t.trade_count ?? t.tradeCount ?? 0,
+    buyVolume: t.volumeBuy ?? t.buy_volume ?? t.buyVolume ?? 0,
+    sellVolume: t.volumeSell ?? t.sell_volume ?? t.sellVolume ?? 0,
+    totalPnl: t.totalPnl ?? 0,
+    realizedPnl: t.realizedPnl ?? 0,
   })).filter(t => t.wallet);
 }
 
